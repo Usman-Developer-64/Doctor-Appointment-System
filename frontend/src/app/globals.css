@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ─── Healthcare Light Theme ─── */
+    --background: 210 40% 98%;      /* Soft blue-white */
+    --foreground: 222 47% 11%;      /* Deep navy text */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 213 94% 55%;         /* Trust Blue #3B82F6 */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 174 60% 40%;       /* Health Teal #0D9488 */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 174 60% 40%;          /* Teal accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 94% 55%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* ─── Healthcare Dark Theme ─── */
+    --background: 222 47% 8%;       /* Deep navy */
+    --foreground: 210 40% 96%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 213 94% 60%;         /* Brighter blue for dark mode */
+    --primary-foreground: 222 47% 8%;
+
+    --secondary: 174 60% 45%;       /* Brighter teal */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 222 47% 15%;
+    --muted-foreground: 215 16% 65%;
+
+    --accent: 174 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 47% 18%;
+    --input: 222 47% 18%;
+    --ring: 213 94% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* ─── Glassmorphism utility ─── */
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-700/30;
+  }
+
+  /* ─── Gradient backgrounds ─── */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-blue-500 to-teal-500;
+  }
+
+  .gradient-primary-vertical {
+    @apply bg-gradient-to-b from-blue-500 to-teal-500;
+  }
+
+  .gradient-mesh {
+    background:
+      radial-gradient(at 40% 20%, hsla(213, 94%, 55%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(174, 60%, 40%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(213, 94%, 55%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(174, 60%, 40%, 0.06) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(213, 94%, 55%, 0.1) 0px, transparent 50%);
+  }
+
+  .dark .gradient-mesh {
+    background:
+      radial-gradient(at 40% 20%, hsla(213, 94%, 55%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(174, 60%, 40%, 0.06) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(213, 94%, 55%, 0.04) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(174, 60%, 40%, 0.04) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(213, 94%, 55%, 0.06) 0px, transparent 50%);
+  }
+
+  /* ─── Text gradients ─── */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-500;
+  }
+
+  /* ─── Card hover effects ─── */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1;
+  }
+
+  /* ─── Stagger animation delays ─── */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+
+  /* ─── Scrollbar styling ─── */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
