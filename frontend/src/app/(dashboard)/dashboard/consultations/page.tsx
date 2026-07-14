@@ -36,6 +36,8 @@ interface ChatMessage {
   attachmentType?: 'image' | 'document' | 'voice';
   attachmentUrl?: string;
   fileName?: string;
+  senderId?: string;
+  readBy?: string[];
 }
 
 export default function ConsultationsPage() {
@@ -50,6 +52,8 @@ export default function ConsultationsPage() {
   const [roomId, setRoomId] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [activePartnerId, setActivePartnerId] = useState('');
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   // Call states
   const [isCalling, setIsCalling] = useState(false);
@@ -172,28 +176,23 @@ export default function ConsultationsPage() {
       name: `${user.firstName} ${user.lastName}`,
     });
 
+    // Request custom rooms list from the server
+    globalSocket.emit('get-custom-rooms', { userId: user._id });
+
+    // Handle custom rooms list response from server
+    globalSocket.on('custom-rooms-list', (roomsList: any[]) => {
+      setCustomChats(roomsList);
+      const counts: Record<string, number> = {};
+      roomsList.forEach((r) => {
+        counts[r.roomId] = r.unreadCount || 0;
+      });
+      setUnreadCounts(counts);
+    });
+
     // Listen for background notifications
     globalSocket.on('new-message-notification', (data) => {
-      // Auto register custom chat rooms in sidebar
-      if (data.roomId.startsWith('chat_')) {
-        const storedCustomStr = localStorage.getItem(`custom_chats_${user._id}`) || '[]';
-        const parsedCustom = JSON.parse(storedCustomStr);
-        const exists = parsedCustom.some((c: any) => c.roomId === data.roomId);
-        if (!exists) {
-          const parts = data.roomId.split('_');
-          const oppId = parts[1] === user._id ? parts[2] : parts[1];
-          const newCustom = {
-            roomId: data.roomId,
-            partnerName: data.senderName,
-            partnerId: oppId,
-            specialization: user.role === 'doctor' ? 'Patient Inquiry' : 'Specialist',
-            date: new Date().toISOString(),
-          };
-          const updated = [...parsedCustom, newCustom];
-          setCustomChats(updated);
-          localStorage.setItem(`custom_chats_${user._id}`, JSON.stringify(updated));
-        }
-      }
+      // Refresh the rooms list and unread counts immediately on notification
+      globalSocket.emit('get-custom-rooms', { userId: user._id });
 
       // Only show notification if the message is NOT from the active selected chat
       if (data.roomId !== roomId) {
@@ -204,7 +203,13 @@ export default function ConsultationsPage() {
       }
     });
 
-    // Load any custom local storage chats
+    // Handle messages marked read event
+    globalSocket.on('messages-marked-read', (data: { roomId: string; userId: string }) => {
+      // Refresh unread counts
+      globalSocket.emit('get-custom-rooms', { userId: user._id });
+    });
+
+    // Load any custom local storage chats as fallback
     const savedCustom = localStorage.getItem(`custom_chats_${user._id}`);
     if (savedCustom) {
       setCustomChats(JSON.parse(savedCustom));
@@ -259,6 +264,7 @@ export default function ConsultationsPage() {
     setMessages([]);
     setRoomId(targetRoomId);
     setPeerName(partnerName);
+    setActivePartnerId(partnerId);
     setPeerOnline(false);
     setPeerLastSeen(null);
 
@@ -276,8 +282,13 @@ export default function ConsultationsPage() {
         attachmentType: msg.attachmentType || undefined,
         attachmentUrl: msg.attachmentUrl || undefined,
         fileName: msg.fileName || undefined,
+        senderId: msg.senderId || undefined,
+        readBy: msg.readBy || [],
       }));
       setMessages(formattedHistory);
+      // Immediately mark as read upon loading history
+      socket.emit('mark-read', { roomId: targetRoomId, userId: user._id });
+      globalSocketRef.current?.emit('get-custom-rooms', { userId: user._id });
     });
 
     socket.on('user-joined', (data) => {
@@ -310,6 +321,21 @@ export default function ConsultationsPage() {
     socket.on('receive-message', (data: ChatMessage) => {
       setMessages((prev) => [...prev, data]);
       playNotificationSound();
+      // Since room is currently active, mark it as read immediately
+      socket.emit('mark-read', { roomId: targetRoomId, userId: user._id });
+      globalSocketRef.current?.emit('get-custom-rooms', { userId: user._id });
+    });
+
+    socket.on('messages-marked-read', (data: { roomId: string; userId: string }) => {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (!msg.readBy) msg.readBy = [];
+          if (!msg.readBy.includes(data.userId)) {
+            return { ...msg, readBy: [...msg.readBy, data.userId] };
+          }
+          return msg;
+        })
+      );
     });
 
     socket.on('call-made', (data) => {
@@ -521,6 +547,8 @@ export default function ConsultationsPage() {
       senderName: `${user.firstName} ${user.lastName}`,
       text: chatInput.trim(),
       createdAt: new Date().toISOString(),
+      senderId: user._id,
+      readBy: [user._id],
       ...attachment,
     };
 
@@ -529,11 +557,15 @@ export default function ConsultationsPage() {
     socketRef.current.emit('send-message', {
       roomId,
       recipientId,
+      senderId: user._id,
       ...baseMsg,
     });
 
     setMessages((prev) => [...prev, baseMsg]);
     setChatInput('');
+    
+    // Refresh unread counts
+    globalSocketRef.current?.emit('get-custom-rooms', { userId: user._id });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document') => {
@@ -649,6 +681,14 @@ export default function ConsultationsPage() {
 
   const filteredCustomChats = customChats.filter((c) => {
     return c.partnerName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const filteredDoctors = dbDoctors.filter((doc) => {
+    const docName = `Dr. ${doc.firstName} ${doc.lastName}`.toLowerCase();
+    return (
+      docName.includes(doctorSearchQuery.toLowerCase()) ||
+      (doc.specialization || '').toLowerCase().includes(doctorSearchQuery.toLowerCase())
+    );
   });
 
   // Filter global database directory list: Show matching doctors when searching, OR show all doctors if user has zero active chats
@@ -839,6 +879,11 @@ export default function ConsultationsPage() {
                           <p className="text-[9px] text-muted-foreground truncate flex-1">
                             Slot: {app.slot}
                           </p>
+                          {unreadCounts[app._id] > 0 && (
+                            <span className="h-4.5 w-4.5 min-w-[18px] rounded-full bg-emerald-500 text-white font-bold text-[9px] flex items-center justify-center shrink-0 animate-pulse ml-1.5 px-1 mr-1">
+                              {unreadCounts[app._id]}
+                            </span>
+                          )}
                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
                             app.status === 'confirmed' ? 'text-blue-600 bg-blue-500/10' :
                             app.status === 'completed' ? 'text-emerald-600 bg-emerald-500/10' :
@@ -881,6 +926,11 @@ export default function ConsultationsPage() {
                           <p className="text-[9px] text-muted-foreground truncate flex-1">
                             {c.specialization || 'General Consultation'}
                           </p>
+                          {unreadCounts[c.roomId] > 0 && (
+                            <span className="h-4.5 w-4.5 min-w-[18px] rounded-full bg-emerald-500 text-white font-bold text-[9px] flex items-center justify-center shrink-0 animate-pulse ml-1.5 px-1 mr-1">
+                              {unreadCounts[c.roomId]}
+                            </span>
+                          )}
                           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-teal-600 bg-teal-500/10">
                             Direct Chat
                           </span>
@@ -1068,9 +1118,20 @@ export default function ConsultationsPage() {
                           )}
 
                           {!isSystem && (
-                            <span className="text-[8px] self-end mt-1 opacity-70 block select-none">
-                              {formatMessageTimestamp(msg.createdAt)}
-                            </span>
+                            <div className="flex items-center justify-end gap-1 mt-1 select-none">
+                              <span className="text-[8px] opacity-70 block">
+                                {formatMessageTimestamp(msg.createdAt)}
+                              </span>
+                              {isMe && (
+                                <span className="text-[9px] shrink-0 font-bold select-none leading-none">
+                                  {msg.readBy && msg.readBy.filter((id) => id && id !== user._id).length > 0 ? (
+                                    <span className="text-teal-300" title="Read">✓✓</span>
+                                  ) : (
+                                    <span className="opacity-50" title="Sent">✓</span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

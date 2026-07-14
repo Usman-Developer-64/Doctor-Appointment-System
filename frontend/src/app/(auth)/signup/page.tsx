@@ -53,7 +53,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const data: Record<string, string> = {
+      const data: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,

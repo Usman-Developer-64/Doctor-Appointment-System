@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { TelemedicineMessage, TelemedicineMessageDocument } from './schemas/message.schema';
 
 @WebSocketGateway({
@@ -82,6 +82,7 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
         attachmentType: data.attachmentType || null,
         attachmentUrl: data.attachmentUrl || null,
         fileName: data.fileName || null,
+        readBy: [data.senderId || ''],
       });
       await savedMsg.save();
 
@@ -93,6 +94,8 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
         attachmentUrl: data.attachmentUrl,
         fileName: data.fileName,
         createdAt: (savedMsg as any).createdAt,
+        senderId: data.senderId,
+        readBy: (savedMsg as any).readBy,
       });
 
       // 4. Relay background notification to recipient's personal room channel
@@ -105,6 +108,8 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
           attachmentUrl: data.attachmentUrl,
           fileName: data.fileName,
           createdAt: (savedMsg as any).createdAt,
+          senderId: data.senderId,
+          readBy: (savedMsg as any).readBy,
         });
       }
     } catch (err) {
@@ -166,6 +171,28 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
     });
   }
 
+  @SubscribeMessage('mark-read')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; userId: string },
+  ) {
+    try {
+      await this.messageModel
+        .updateMany(
+          { roomId: data.roomId, readBy: { $ne: data.userId } },
+          { $addToSet: { readBy: data.userId } },
+        )
+        .exec();
+      
+      this.server.to(data.roomId).emit('messages-marked-read', {
+        roomId: data.roomId,
+        userId: data.userId,
+      });
+    } catch (e) {
+      console.error('Failed to mark messages as read:', e);
+    }
+  }
+
   @SubscribeMessage('get-custom-rooms')
   async handleGetCustomRooms(
     @ConnectedSocket() client: Socket,
@@ -189,7 +216,7 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
             // Raw mongoose database driver lookup for the partner user details
             const partner = await this.messageModel.db
               .collection('users')
-              .findOne({ _id: new Object(partnerId) });
+              .findOne({ _id: new Types.ObjectId(partnerId) });
 
             if (partner) {
               const lastMsg = await this.messageModel
@@ -197,13 +224,20 @@ export class TelemedicineGateway implements OnGatewayConnection, OnGatewayDiscon
                 .sort({ createdAt: -1 })
                 .exec();
 
+              // Calculate unread count for this user in this room
+              const unreadCount = await this.messageModel.countDocuments({
+                roomId,
+                readBy: { $ne: data.userId },
+              });
+
               customRoomsList.push({
                 roomId,
                 partnerName: partner.role === 'doctor' ? `Dr. ${partner.firstName} ${partner.lastName}` : `${partner.firstName} ${partner.lastName}`,
                 partnerId,
                 specialization: partner.specialization || 'Patient Inquiry',
-                date: lastMsg ? lastMsg.createdAt : new Date(),
+                date: lastMsg ? (lastMsg as any).createdAt : new Date(),
                 lastMessageText: lastMsg ? lastMsg.text : 'Click to chat...',
+                unreadCount,
               });
             }
           } catch (err) {
