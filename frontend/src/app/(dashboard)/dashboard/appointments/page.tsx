@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/auth-context';
-import api from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/auth-context";
+import api from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Calendar,
   Clock,
@@ -18,42 +18,44 @@ import {
   ClipboardCheck,
   Loader2,
   AlertCircle,
-} from 'lucide-react';
-import { Appointment } from '@/types/appointment';
+} from "lucide-react";
+import { Appointment } from "@/types/appointment";
 
-type TabType = 'pending' | 'upcoming' | 'past';
+type TabType = "pending" | "upcoming" | "past";
 
 export default function AppointmentsDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Tabs state
-  const [activeTab, setActiveTab] = useState<TabType>('upcoming');
+  const [activeTab, setActiveTab] = useState<TabType>("upcoming");
 
   // Action states
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [notesModalId, setNotesModalId] = useState<string | null>(null);
-  const [treatmentNotes, setTreatmentNotes] = useState('');
+  const [treatmentNotes, setTreatmentNotes] = useState("");
 
   // Review states
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(null);
+  const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(
+    null,
+  );
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
+  const [reviewComment, setReviewComment] = useState("");
   const [isReviewLoading, setIsReviewLoading] = useState(false);
 
   const fetchAppointments = useCallback(async () => {
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
-      const response = await api.get('/appointments/my');
+      const response = await api.get("/appointments/my");
       setAppointments(response.data.data);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          'Failed to load appointments. Please refresh.'
+          "Failed to load appointments. Please refresh.",
       );
     } finally {
       setIsLoading(false);
@@ -68,8 +70,8 @@ export default function AppointmentsDashboard() {
 
   const handleStatusUpdate = async (
     id: string,
-    status: 'confirmed' | 'cancelled' | 'completed',
-    notes?: string
+    status: "confirmed" | "cancelled" | "completed",
+    notes?: string,
   ) => {
     setActionLoadingId(id);
     try {
@@ -80,12 +82,14 @@ export default function AppointmentsDashboard() {
 
       // Update state locally
       setAppointments((prev) =>
-        prev.map((app) => (app._id === id ? response.data.data : app))
+        prev.map((app) => (app._id === id ? response.data.data : app)),
       );
       setNotesModalId(null);
-      setTreatmentNotes('');
+      setTreatmentNotes("");
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update appointment status.');
+      alert(
+        err.response?.data?.message || "Failed to update appointment status.",
+      );
     } finally {
       setActionLoadingId(null);
     }
@@ -96,18 +100,18 @@ export default function AppointmentsDashboard() {
     if (!reviewAppointmentId) return;
     setIsReviewLoading(true);
     try {
-      await api.post('/reviews', {
+      await api.post("/reviews", {
         appointmentId: reviewAppointmentId,
         rating: reviewRating,
         comment: reviewComment,
       });
       setReviewModalOpen(false);
       setReviewAppointmentId(null);
-      setReviewComment('');
+      setReviewComment("");
       setReviewRating(5);
-      alert('Thank you for your feedback! Review submitted successfully.');
+      alert("Thank you for your feedback! Review submitted successfully.");
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit review.');
+      alert(err.response?.data?.message || "Failed to submit review.");
     } finally {
       setIsReviewLoading(false);
     }
@@ -115,54 +119,58 @@ export default function AppointmentsDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200/50';
-      case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200/50';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200/50';
+      case "pending":
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50";
+      case "confirmed":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200/50";
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200/50";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200/50";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
     });
   };
 
   const formatTime = (time24: string) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":");
     let h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
+    const ampm = h >= 12 ? "PM" : "AM";
     h = h % 12;
     h = h ? h : 12;
     return `${h}:${minutes} ${ampm}`;
   };
 
   // Grouping appointments
-  const pendingAppointments = appointments.filter((app) => app.status === 'pending');
-  const upcomingAppointments = appointments.filter((app) => app.status === 'confirmed');
+  const pendingAppointments = appointments.filter(
+    (app) => app.status === "pending",
+  );
+  const upcomingAppointments = appointments.filter(
+    (app) => app.status === "confirmed",
+  );
   const pastAppointments = appointments.filter(
-    (app) => app.status === 'completed' || app.status === 'cancelled'
+    (app) => app.status === "completed" || app.status === "cancelled",
   );
 
   const getActiveList = () => {
     switch (activeTab) {
-      case 'pending':
+      case "pending":
         return pendingAppointments;
-      case 'upcoming':
+      case "upcoming":
         return upcomingAppointments;
-      case 'past':
+      case "past":
         return pastAppointments;
     }
   };
@@ -176,22 +184,22 @@ export default function AppointmentsDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
           <p className="text-muted-foreground mt-1">
-            {user.role === 'doctor'
-              ? 'Review patient booking requests and manage daily appointments.'
-              : 'Track your consultation visits and upcoming doctor schedules.'}
+            {user.role === "doctor"
+              ? "Review patient booking requests and manage daily appointments."
+              : "Track your consultation visits and upcoming doctor schedules."}
           </p>
         </div>
       </div>
 
       {/* Tabs Selector */}
       <div className="flex border-b border-border">
-        {user.role === 'doctor' && (
+        {user.role === "doctor" && (
           <button
-            onClick={() => setActiveTab('pending')}
+            onClick={() => setActiveTab("pending")}
             className={`px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
-              activeTab === 'pending'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+              activeTab === "pending"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             } flex items-center gap-2`}
           >
             Requests
@@ -203,26 +211,29 @@ export default function AppointmentsDashboard() {
           </button>
         )}
         <button
-          onClick={() => setActiveTab('upcoming')}
+          onClick={() => setActiveTab("upcoming")}
           className={`px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
-            activeTab === 'upcoming'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            activeTab === "upcoming"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           } flex items-center gap-2`}
         >
           Upcoming
-          {user.role === 'patient' && pendingAppointments.length > 0 && (
-            <span className="bg-amber-500 text-white rounded-full text-xs h-5 px-1.5 flex items-center justify-center font-bold" title="Pending approval">
+          {user.role === "patient" && pendingAppointments.length > 0 && (
+            <span
+              className="bg-amber-500 text-white rounded-full text-xs h-5 px-1.5 flex items-center justify-center font-bold"
+              title="Pending approval"
+            >
               {pendingAppointments.length}
             </span>
           )}
         </button>
         <button
-          onClick={() => setActiveTab('past')}
+          onClick={() => setActiveTab("past")}
           className={`px-6 py-3 font-semibold text-sm transition-all border-b-2 ${
-            activeTab === 'past'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            activeTab === "past"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           History
@@ -246,22 +257,29 @@ export default function AppointmentsDashboard() {
           </div>
           <h3 className="font-bold text-lg">No Appointments Found</h3>
           <p className="text-muted-foreground mt-1 max-w-sm mx-auto text-sm">
-            {activeTab === 'pending'
-              ? 'There are no pending requests requiring your review.'
-              : activeTab === 'upcoming'
-                ? 'You do not have any confirmed upcoming appointments scheduled.'
-                : 'Your consultation history is currently empty.'}
+            {activeTab === "pending"
+              ? "There are no pending requests requiring your review."
+              : activeTab === "upcoming"
+                ? "You do not have any confirmed upcoming appointments scheduled."
+                : "Your consultation history is currently empty."}
           </p>
         </div>
       ) : (
         <div className="space-y-4 animate-fade-in">
           {/* Patients Listing Profile UI */}
           {activeList.map((app) => {
-            const oppositeUser = user.role === 'doctor' ? (app.patient as any) : (app.doctor as any);
-            const initials = `${oppositeUser?.firstName?.charAt(0) || ''}${oppositeUser?.lastName?.charAt(0) || ''}`.toUpperCase();
+            const oppositeUser =
+              user.role === "doctor"
+                ? (app.patient as any)
+                : (app.doctor as any);
+            const initials =
+              `${oppositeUser?.firstName?.charAt(0) || ""}${oppositeUser?.lastName?.charAt(0) || ""}`.toUpperCase();
 
             // Include pending appointments in the patient's upcoming tab
-            const displayStatus = user.role === 'patient' && activeTab === 'upcoming' ? app.status : null;
+            const displayStatus =
+              user.role === "patient" && activeTab === "upcoming"
+                ? app.status
+                : null;
 
             return (
               <div
@@ -275,12 +293,14 @@ export default function AppointmentsDashboard() {
                   </div>
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <h3 className="font-bold text-base text-foreground truncate">
-                      {user.role === 'doctor' ? 'Patient:' : 'Doctor:'} {oppositeUser?.firstName} {oppositeUser?.lastName}
+                      {user.role === "doctor" ? "Patient:" : "Doctor:"}{" "}
+                      {oppositeUser?.firstName} {oppositeUser?.lastName}
                     </h3>
-                    
-                    {user.role === 'patient' && (
+
+                    {user.role === "patient" && (
                       <p className="text-xs text-primary font-medium">
-                        {oppositeUser?.specialization} • Rs. {oppositeUser?.consultationFee}
+                        {oppositeUser?.specialization} • Rs.{" "}
+                        {oppositeUser?.consultationFee}
                       </p>
                     )}
 
@@ -299,7 +319,9 @@ export default function AppointmentsDashboard() {
                     {/* Symptoms/Reason */}
                     {app.symptoms && (
                       <div className="text-xs bg-muted/60 p-2.5 rounded-lg text-muted-foreground mt-2 border border-border max-w-xl">
-                        <span className="font-semibold text-foreground block mb-0.5">Symptoms:</span>
+                        <span className="font-semibold text-foreground block mb-0.5">
+                          Symptoms:
+                        </span>
                         {app.symptoms}
                       </div>
                     )}
@@ -321,18 +343,20 @@ export default function AppointmentsDashboard() {
                 <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
                   {/* Status indicator on Patient Upcoming list */}
                   {displayStatus && (
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase ${getStatusBadge(displayStatus)}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase ${getStatusBadge(displayStatus)}`}
+                    >
                       {displayStatus}
                     </span>
                   )}
 
                   {/* Pending/Request Actions for Doctor */}
-                  {user.role === 'doctor' && activeTab === 'pending' && (
+                  {user.role === "doctor" && activeTab === "pending" && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleStatusUpdate(app._id, 'cancelled')}
+                        onClick={() => handleStatusUpdate(app._id, "cancelled")}
                         disabled={actionLoadingId === app._id}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200"
                       >
@@ -342,7 +366,7 @@ export default function AppointmentsDashboard() {
                       <Button
                         size="sm"
                         variant="gradient"
-                        onClick={() => handleStatusUpdate(app._id, 'confirmed')}
+                        onClick={() => handleStatusUpdate(app._id, "confirmed")}
                         disabled={actionLoadingId === app._id}
                       >
                         <Check className="h-4 w-4 mr-1" />
@@ -352,12 +376,12 @@ export default function AppointmentsDashboard() {
                   )}
 
                   {/* Confirmed / Upcoming Actions for Doctor */}
-                  {user.role === 'doctor' && activeTab === 'upcoming' && (
+                  {user.role === "doctor" && activeTab === "upcoming" && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleStatusUpdate(app._id, 'cancelled')}
+                        onClick={() => handleStatusUpdate(app._id, "cancelled")}
                         disabled={actionLoadingId === app._id}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200"
                       >
@@ -377,38 +401,43 @@ export default function AppointmentsDashboard() {
                   )}
 
                   {/* Patient Action: Cancel Request/Booking */}
-                  {user.role === 'patient' && activeTab === 'upcoming' && app.status !== 'cancelled' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleStatusUpdate(app._id, 'cancelled')}
-                      disabled={actionLoadingId === app._id}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 rounded-lg"
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel Visit
-                    </Button>
-                  )}
+                  {user.role === "patient" &&
+                    activeTab === "upcoming" &&
+                    app.status !== "cancelled" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStatusUpdate(app._id, "cancelled")}
+                        disabled={actionLoadingId === app._id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 rounded-lg"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel Visit
+                      </Button>
+                    )}
 
                   {/* History Status badges */}
-                  {activeTab === 'past' && (
+                  {activeTab === "past" && (
                     <div className="flex flex-col items-end gap-2">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase ${getStatusBadge(app.status)}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase ${getStatusBadge(app.status)}`}
+                      >
                         {app.status}
                       </span>
-                      {user.role === 'patient' && app.status === 'completed' && (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => {
-                            setReviewAppointmentId(app._id);
-                            setReviewModalOpen(true);
-                          }}
-                          className="text-primary hover:bg-primary/5 rounded-lg border-primary/20 text-[11px] h-7"
-                        >
-                          Leave Review
-                        </Button>
-                      )}
+                      {user.role === "patient" &&
+                        app.status === "completed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setReviewAppointmentId(app._id);
+                              setReviewModalOpen(true);
+                            }}
+                            className="text-primary hover:bg-primary/5 rounded-lg border-primary/20 text-[11px] h-7"
+                          >
+                            Leave Review
+                          </Button>
+                        )}
                     </div>
                   )}
                 </div>
@@ -430,11 +459,14 @@ export default function AppointmentsDashboard() {
               Complete Appointment
             </h3>
             <p className="text-muted-foreground text-xs mb-4">
-              Add any prescription, instructions, or notes for the patient below. This feedback will show on their profile history.
+              Add any prescription, instructions, or notes for the patient
+              below. This feedback will show on their profile history.
             </p>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="treatment-notes">Treatment/Prescription Notes</Label>
+                <Label htmlFor="treatment-notes">
+                  Treatment/Prescription Notes
+                </Label>
                 <textarea
                   id="treatment-notes"
                   value={treatmentNotes}
@@ -454,7 +486,13 @@ export default function AppointmentsDashboard() {
                 <Button
                   variant="gradient"
                   className="flex-1"
-                  onClick={() => handleStatusUpdate(notesModalId, 'completed', treatmentNotes)}
+                  onClick={() =>
+                    handleStatusUpdate(
+                      notesModalId,
+                      "completed",
+                      treatmentNotes,
+                    )
+                  }
                   disabled={actionLoadingId === notesModalId}
                 >
                   Confirm Completed
@@ -477,7 +515,8 @@ export default function AppointmentsDashboard() {
               Leave a Review
             </h3>
             <p className="text-muted-foreground text-xs mb-4">
-              Please share your experience with the doctor to help other patients find the best care.
+              Please share your experience with the doctor to help other
+              patients find the best care.
             </p>
             <form onSubmit={handleReviewSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -490,7 +529,8 @@ export default function AppointmentsDashboard() {
                 >
                   {[5, 4, 3, 2, 1].map((star) => (
                     <option key={star} value={star}>
-                      {star} {'★'.repeat(star)}{'☆'.repeat(5 - star)}
+                      {star} {"★".repeat(star)}
+                      {"☆".repeat(5 - star)}
                     </option>
                   ))}
                 </select>
@@ -528,7 +568,7 @@ export default function AppointmentsDashboard() {
                       Submitting...
                     </>
                   ) : (
-                    'Submit Review'
+                    "Submit Review"
                   )}
                 </Button>
               </div>
