@@ -22,6 +22,9 @@ export class TelemedicineMessage {
 
   @Prop({ default: null })
   fileName: string;
+
+  @Prop({ type: [String], default: [] })
+  readBy: string[];
 }
 
 export const TelemedicineMessageSchema = SchemaFactory.createForClass(TelemedicineMessage);
