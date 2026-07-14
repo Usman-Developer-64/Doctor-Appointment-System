@@ -69,7 +69,7 @@ export default function SignupPage() {
         if (formData.city) data.city = formData.city;
       }
 
-      await register(data);
+      await register(data as any);
       router.push('/dashboard');
     } catch (err) {
       const apiError = err as any;
@@ -118,25 +118,22 @@ export default function SignupPage() {
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-3 mb-6">
           <div
-            className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold transition-all ${
-              step >= 1
+            className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold transition-all ${step >= 1
                 ? 'gradient-primary text-white'
                 : 'bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             1
           </div>
           <div
-            className={`h-[2px] w-12 rounded transition-all ${
-              step >= 2 ? 'bg-primary' : 'bg-muted'
-            }`}
+            className={`h-[2px] w-12 rounded transition-all ${step >= 2 ? 'bg-primary' : 'bg-muted'
+              }`}
           />
           <div
-            className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold transition-all ${
-              step >= 2
+            className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-bold transition-all ${step >= 2
                 ? 'gradient-primary text-white'
                 : 'bg-muted text-muted-foreground'
-            }`}
+              }`}
           >
             2
           </div>
@@ -272,11 +269,10 @@ export default function SignupPage() {
                     <button
                       type="button"
                       onClick={() => updateField('role', 'patient')}
-                      className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${
-                        formData.role === 'patient'
+                      className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${formData.role === 'patient'
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'
-                      }`}
+                        }`}
                     >
                       <User className="h-8 w-8 mx-auto mb-2 text-blue-500" />
                       <p className="font-semibold text-sm">Patient</p>
@@ -287,11 +283,10 @@ export default function SignupPage() {
                     <button
                       type="button"
                       onClick={() => updateField('role', 'doctor')}
-                      className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${
-                        formData.role === 'doctor'
+                      className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${formData.role === 'doctor'
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'
-                      }`}
+                        }`}
                     >
                       <Stethoscope className="h-8 w-8 mx-auto mb-2 text-teal-500" />
                       <p className="font-semibold text-sm">Doctor</p>
