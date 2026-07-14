@@ -53,6 +53,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
+      // TypeScript compiler ko direct batane ke liye ke data 'any' type ka hi hai
       const data: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -61,7 +62,10 @@ export default function SignupPage() {
         role: formData.role,
       };
 
-      if (formData.phone) data.phone = formData.phone;
+      if (formData.phone) {
+        data.phone = formData.phone;
+      }
+
       if (formData.role === "doctor") {
         if (formData.specialization)
           data.specialization = formData.specialization;
@@ -69,6 +73,7 @@ export default function SignupPage() {
         if (formData.city) data.city = formData.city;
       }
 
+      // register function ke andar explicitly as any pass kiya hai jo types skip kar dega
       await register(data as any);
       router.push("/dashboard");
     } catch (err) {
