@@ -15,7 +15,8 @@ export class UsersService {
    * Find a user by email (includes password for auth)
    */
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email }).select('+password').exec();
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    return this.userModel.findOne({ email: cleanEmail }).select('+password').exec();
   }
 
   /**
@@ -187,5 +188,32 @@ export class UsersService {
     }
 
     return this.userModel.find(query).exec();
+  }
+
+  /**
+   * Change user role (admin only)
+   */
+  async changeRole(userId: string, newRole: UserRole): Promise<UserDocument> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.role = newRole;
+    // Auto-verify if promoted to admin
+    if (newRole === UserRole.ADMIN) {
+      user.isVerified = true;
+    }
+    return user.save();
+  }
+
+  /**
+   * Delete user permanently (admin only)
+   */
+  async deleteUser(userId: string): Promise<void> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.userModel.findByIdAndDelete(userId).exec();
   }
 }

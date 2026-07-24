@@ -26,10 +26,22 @@ import { useRouter } from 'next/navigation';
 export default function DoctorDetailPage() {
   const params = useParams();
   const doctorId = params.id as string;
+  const router = useRouter();
+  const { user } = useAuth();
 
   const [doctor, setDoctor] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Booking states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [isSlotsLoading, setIsSlotsLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState('');
+  const [symptoms, setSymptoms] = useState('');
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchDoctorDetails = useCallback(async () => {
     setIsLoading(true);
@@ -51,6 +63,29 @@ export default function DoctorDetailPage() {
   useEffect(() => {
     fetchDoctorDetails();
   }, [fetchDoctorDetails]);
+
+  // Fetch slots on date change
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const fetchSlots = async () => {
+      setIsSlotsLoading(true);
+      setAvailableSlots([]);
+      setSelectedSlot('');
+      try {
+        const response = await api.get(`/appointments/slots`, {
+          params: { doctorId, date: selectedDate },
+        });
+        setAvailableSlots(response.data.data);
+      } catch (err: any) {
+        console.error('Failed to load slots', err);
+      } finally {
+        setIsSlotsLoading(false);
+      }
+    };
+
+    fetchSlots();
+  }, [selectedDate, doctorId]);
 
   if (isLoading) {
     return (
@@ -88,42 +123,6 @@ export default function DoctorDetailPage() {
     h = h ? h : 12; // the hour '0' should be '12'
     return `${h}:${minutes} ${ampm}`;
   };
-
-  const router = useRouter();
-  const { user } = useAuth();
-
-  // Booking states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
-  const [isSlotsLoading, setIsSlotsLoading] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState('');
-  const [symptoms, setSymptoms] = useState('');
-  const [isBookingLoading, setIsBookingLoading] = useState(false);
-  const [bookingMessage, setBookingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Fetch slots on date change
-  useEffect(() => {
-    if (!selectedDate) return;
-
-    const fetchSlots = async () => {
-      setIsSlotsLoading(true);
-      setAvailableSlots([]);
-      setSelectedSlot('');
-      try {
-        const response = await api.get(`/appointments/slots`, {
-          params: { doctorId, date: selectedDate },
-        });
-        setAvailableSlots(response.data.data);
-      } catch (err: any) {
-        console.error('Failed to load slots', err);
-      } finally {
-        setIsSlotsLoading(false);
-      }
-    };
-
-    fetchSlots();
-  }, [selectedDate, doctorId]);
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

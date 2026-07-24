@@ -5,15 +5,18 @@ import {
   Get,
   UseGuards,
   Req,
+  Res,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ChangePasswordDto } from '../users/dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -38,6 +41,21 @@ export class AuthController {
       message: 'Login successful',
       data: result,
     };
+  }
+
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth(@Req() req: any) {
+    // Triggers redirect to Google
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuthRedirect(@Req() req: any, @Res() res: Response) {
+    const result = await this.authService.googleLogin(req.user);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    // Redirect back to frontend login page with token in query params
+    return res.redirect(`${frontendUrl}/login?token=${result.token}`);
   }
 
   @Get('me')

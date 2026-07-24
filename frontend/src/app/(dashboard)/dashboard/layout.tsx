@@ -108,7 +108,7 @@ const navItems: NavItem[] = [
     href: '/dashboard/about',
     label: 'About Suite',
     icon: Info,
-    roles: ['admin', 'doctor', 'patient'],
+    roles: ['doctor', 'patient'],
   },
   {
     href: '/dashboard/prescriptions',
@@ -144,7 +144,7 @@ const navItems: NavItem[] = [
     href: '/dashboard/articles',
     label: 'Articles & Blogs',
     icon: BookOpen,
-    roles: ['admin', 'doctor', 'patient'],
+    roles: ['doctor', 'patient'],
   },
   {
     href: '/dashboard/lab-tests',
@@ -162,7 +162,7 @@ const navItems: NavItem[] = [
     href: '/dashboard/emergency',
     label: 'Emergency SOS',
     icon: AlertTriangle,
-    roles: ['admin', 'doctor', 'patient'],
+    roles: ['doctor', 'patient'],
   },
   {
     href: '/dashboard/vaccinations',
@@ -180,7 +180,7 @@ const navItems: NavItem[] = [
     href: '/dashboard/support',
     label: 'Support & FAQs',
     icon: HelpCircle,
-    roles: ['admin', 'doctor', 'patient'],
+    roles: ['doctor', 'patient'],
   },
 ];
 

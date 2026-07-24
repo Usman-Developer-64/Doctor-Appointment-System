@@ -2,11 +2,13 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Body,
   UseGuards,
   Req,
   Param,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -94,6 +96,56 @@ export class UsersController {
       success: true,
       message: 'Doctor verified successfully',
       data: user,
+    };
+  }
+
+  /**
+   * Change user role (Admin only)
+   */
+  @Patch(':id/role')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async changeRole(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('role') role: string,
+  ) {
+    // Prevent admin from changing their own role
+    if (req.user.sub === id) {
+      throw new BadRequestException('You cannot change your own role');
+    }
+
+    // Validate role
+    if (!Object.values(UserRole).includes(role as UserRole)) {
+      throw new BadRequestException(
+        `Invalid role. Must be one of: ${Object.values(UserRole).join(', ')}`,
+      );
+    }
+
+    const user = await this.usersService.changeRole(id, role as UserRole);
+    return {
+      success: true,
+      message: `User role changed to ${role}`,
+      data: user,
+    };
+  }
+
+  /**
+   * Delete user permanently (Admin only)
+   */
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async deleteUser(@Req() req: any, @Param('id') id: string) {
+    // Prevent admin from deleting themselves
+    if (req.user.sub === id) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    await this.usersService.deleteUser(id);
+    return {
+      success: true,
+      message: 'User deleted successfully',
     };
   }
 }

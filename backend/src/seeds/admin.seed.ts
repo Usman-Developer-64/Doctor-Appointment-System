@@ -1,5 +1,4 @@
 import * as mongoose from 'mongoose';
-import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -32,31 +31,33 @@ async function seed() {
 
     const User = mongoose.model('User', UserSchema);
 
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@docapp.com' });
-    if (existingAdmin) {
-      console.log('ℹ️  Admin user already exists');
+    const targetEmail = 'us8187934@gmail.com';
+
+    // Find existing user by email
+    const existingUser = await User.findOne({ email: targetEmail });
+    if (!existingUser) {
+      console.error(`❌ User with email "${targetEmail}" not found in database.`);
+      console.error('   Please register this account first via the signup page, then run this seed again.');
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+
+    // Check if already admin
+    if (existingUser.role === 'admin') {
+      console.log(`ℹ️  User "${targetEmail}" is already an admin.`);
       await mongoose.disconnect();
       process.exit(0);
     }
 
-    // Create admin user
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash('Admin123!', salt);
+    // Update role to admin
+    existingUser.role = 'admin';
+    existingUser.isVerified = true;
+    existingUser.isBlocked = false;
+    await existingUser.save();
 
-    await User.create({
-      firstName: 'Super',
-      lastName: 'Admin',
-      email: 'admin@docapp.com',
-      password: hashedPassword,
-      role: 'admin',
-      isBlocked: false,
-      isVerified: true,
-    });
-
-    console.log('✅ Admin user created successfully');
-    console.log('   Email: admin@docapp.com');
-    console.log('   Password: Admin123!');
+    console.log('✅ User promoted to admin successfully');
+    console.log(`   Email: ${targetEmail}`);
+    console.log(`   Role: admin`);
 
     await mongoose.disconnect();
     process.exit(0);
